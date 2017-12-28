@@ -1,4 +1,5 @@
 # coding:utf-8
+# DES输入10进制的data 输出十进制result
 def initExchange(data):
 	data = list(bin(data))[2:]		# 转为list
 	data = ''.join(data)
