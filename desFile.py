@@ -1,4 +1,5 @@
-from des import *
+# DES的文件操作
+from DES import *
 
 def str2bin(string):
 	result = ''
