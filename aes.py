@@ -41,25 +41,18 @@ inv_s_box = [
 
 
 
+# 将输入明文转为数组形式存储
 def format_plain(plain):
 	plain = str(hex(plain))[2:]
 	while len(plain) < 32:
 		plain = '0' + plain
-	plainlist = [[]*4]*4
-	temp = []
-	temp.append(plain[0:8])
-	temp.append(plain[8:16])
-	temp.append(plain[16:24])
-	temp.append(plain[24:32])
-	print (temp)
+	plainlist = [[0 for i in range(4)] for j in range(4)]
 	for i in range(4):
-		print (i)
-	# print (plainlist)
+		for j in range(4):
+			plainlist[i][j] = plain[2*i+8*j:2*i+8*j+2]
+	return plainlist
 
-
-
-
-
+# 生成所有密钥
 def key_expansion(input_key):
 	# 轮常量
 	rcon = [0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000,\
@@ -118,7 +111,8 @@ if __name__ == '__main__':
 	# print (expan_key)
 
 	plain = 0x124523892ABD0A112104002A0BC11CFC
-	format_plain(plain)
+	plainlist = format_plain(plain)
+	print (plainlist)
 
 
 
