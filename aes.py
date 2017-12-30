@@ -37,10 +37,6 @@ inv_s_box = [
 	[0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61], #  e
 	[0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d]] #  f
 
-# def sub_bytes():
-
-
-
 # 将输入明文转为数组形式存储
 def format_plain(plain):
 	plain = str(hex(plain))[2:]
@@ -51,6 +47,75 @@ def format_plain(plain):
 		for j in range(4):
 			plainlist[i][j] = plain[2*i+8*j:2*i+8*j+2]
 	return plainlist
+
+# 字节代换
+def sub_bytes(plainlist):
+	result = [[0 for i in range(4)] for j in range(4)]
+	for i in range(4):
+		for j in range(4):
+			onebyte = plainlist[i][j]
+			row = int(onebyte[0], 16)
+			col = int(onebyte[1], 16)
+			temp = hex(s_box[row][col])[2:]
+			if len(temp) < 2: temp = '0' + temp
+			result[i][j] = temp
+	return result
+
+def inv_sub_bytes(plainlist):
+	result = [[0 for i in range(4)] for j in range(4)]
+	for i in range(4):
+		for j in range(4):
+			onebyte = plainlist[i][j]
+			row = int(onebyte[0], 16)
+			col = int(onebyte[1], 16)
+			temp = hex(inv_s_box[row][col])[2:]
+			if len(temp) < 2: temp = '0' + temp
+			result[i][j] = temp
+	return result
+
+def shift_rows(plainlist):
+	temp10 = plainlist[1][0]
+	plainlist[1][0] = plainlist[1][1]
+	plainlist[1][1] = plainlist[1][2]
+	plainlist[1][2] = plainlist[1][3]
+	plainlist[1][3] = temp10
+
+	temp20 = plainlist[2][0]
+	temp21 = plainlist[2][1]
+	plainlist[2][0] = plainlist[2][2]
+	plainlist[2][1] = plainlist[2][3]
+	plainlist[2][2] = temp20
+	plainlist[2][3] = temp21
+
+	temp33 = plainlist[3][3]
+	plainlist[3][3] = plainlist[3][2]
+	plainlist[3][2] = plainlist[3][1]
+	plainlist[3][1] = plainlist[3][0]
+	plainlist[3][0] = temp33
+	return plainlist
+
+def inv_shift_rows(plainlist):
+	temp13 = plainlist[1][3]
+	plainlist[1][3] = plainlist[1][2]
+	plainlist[1][2] = plainlist[1][1]
+	plainlist[1][1] = plainlist[1][0]
+	plainlist[1][0] = temp13
+
+	temp20 = plainlist[2][0]
+	temp21 = plainlist[2][1]
+	plainlist[2][0] = plainlist[2][2]
+	plainlist[2][1] = plainlist[2][3]
+	plainlist[2][2] = temp20
+	plainlist[2][3] = temp21
+
+	temp30 = plainlist[3][0]
+	plainlist[3][0] = plainlist[3][1]
+	plainlist[3][1] = plainlist[3][2]
+	plainlist[3][2] = plainlist[3][3]
+	plainlist[3][3] = temp30
+	return plainlist
+
+
 
 # 生成所有密钥
 def key_expansion(input_key):
@@ -65,8 +130,7 @@ def key_expansion(input_key):
 			row = int(key_part[i], 16) 
 			col = int(key_part[i+1], 16)
 			temp = hex(s_box[row][col])[2:]
-			while len(temp) < 2:
-				temp = '0' + temp
+			if len(temp) < 2: temp = '0' + temp
 			key_temp += temp
 		rc = rcon[count - 1]
 		result = rc ^ int(key_temp ,16)
@@ -112,10 +176,9 @@ if __name__ == '__main__':
 
 	plain = 0x124523892ABD0A112104002A0BC11CFC
 	plainlist = format_plain(plain)
+	plainlist = sub_bytes(plainlist)
+	plainlist = shift_rows(plainlist)
 	print (plainlist)
-
-
-
 
 
 
