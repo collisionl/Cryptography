@@ -225,6 +225,21 @@ def inv_mix_column(plainlist):
 
 	return result
 
+# 轮密钥加，逆操作同样（异或的逆运算是本身）
+def round_key_add(plainlist, round):
+	w = [0 for i in range(4)]
+	for i in range(4):
+		w[i] = EXPANSION_KEY[4 * round + i]
+
+	result = [[0 for i in range(4)] for j in range(4)]
+	for i in range(4):
+		for j in range(4):
+			result[i][j] = int(w[j][i*2:i*2+2], 16) ^ int(plainlist[i][j], 16)
+			result[i][j] = hex(result[i][j])[2:]
+			if len(result[i][j]) < 2: result[i][j] = '0' + result[i][j]
+	return result
+
+
 
 # 生成所有密钥
 def key_expansion(input_key):
@@ -278,26 +293,17 @@ def key_expansion(input_key):
 
 
 if __name__ == '__main__':
-	# key = 0x3CA10B2157F01916902E1380ACC107BD
+	global EXPANSION_KEY
+	key = 0x3CA10B2157F01916902E1380ACC107BD
 	# key = 0x61626364656667687A786376626E6D6C
-	# expan_key = key_expansion(key)
-	# print (expan_key)
+	EXPANSION_KEY = key_expansion(key)
+	# print (EXPANSION_KEY)
 
 	plain = 0x124523892ABD0A112104002A0BC11CFC
 	plainlist = format_plain(plain)
 	plainlist = sub_bytes(plainlist)
 	plainlist = shift_rows(plainlist)
 	plainlist = mix_column(plainlist)
+	plainlist = round_key_add(plainlist, 0)
 	print (plainlist)
-
-
-
-
-
-
-
-
-
-
-
 
