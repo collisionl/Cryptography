@@ -61,6 +61,7 @@ def sub_bytes(plainlist):
 			result[i][j] = temp
 	return result
 
+# 逆字节代换
 def inv_sub_bytes(plainlist):
 	result = [[0 for i in range(4)] for j in range(4)]
 	for i in range(4):
@@ -73,6 +74,7 @@ def inv_sub_bytes(plainlist):
 			result[i][j] = temp
 	return result
 
+# 行移位
 def shift_rows(plainlist):
 	temp10 = plainlist[1][0]
 	plainlist[1][0] = plainlist[1][1]
@@ -94,6 +96,7 @@ def shift_rows(plainlist):
 	plainlist[3][0] = temp33
 	return plainlist
 
+# 逆行移位
 def inv_shift_rows(plainlist):
 	temp13 = plainlist[1][3]
 	plainlist[1][3] = plainlist[1][2]
@@ -115,6 +118,112 @@ def inv_shift_rows(plainlist):
 	plainlist[3][3] = temp30
 	return plainlist
 
+# 列混合
+def mix_column(plainlist):
+	# 根据gf(2^8)上的乘二法则运算 page97 4-10
+	def mul2(plainlist_item):
+		plainlist_item = bin(plainlist_item)[2:]
+		while len(plainlist_item) < 8:
+			plainlist_item = '0' + plainlist_item
+		temp = plainlist_item[1:] + '0'
+		temp = int(temp,2)
+		if plainlist_item[0] == '1':
+			result = temp ^ 0b00011011
+			return result
+		else: return temp
+
+	# 如果乘3 则为乘2然后与本身异或
+	def multi(mat_item, plainlist_item):
+		if mat_item == 1:
+			return plainlist_item
+		elif mat_item == 2:
+			return mul2(plainlist_item)
+		elif mat_item == 3:
+			return mul2(plainlist_item) ^ plainlist_item
+
+	matlist = [
+	[0x02, 0x03, 0x01, 0x01],
+	[0x01, 0x02, 0x03, 0x01],
+	[0x01, 0x01, 0x02, 0x03],
+	[0x03, 0x01, 0x01, 0x02]]
+
+	# 16进制str 转 int
+	for i in range(4):
+		for j in range(4):
+			plainlist[i][j] = int(plainlist[i][j], 16)
+
+	# 矩阵乘法
+	result = [[0 for i in range(4)] for j in range(4)]
+	for i in range(4):
+		for j in range(4):
+			temp = 0x0
+			for k in range(4):
+				temp = temp ^ multi(matlist[i][k], plainlist[k][j])
+			result[i][j] = temp
+
+	# int 转 16进制str
+	for i in range(4):
+		for j in range(4):
+			result[i][j] = hex(result[i][j])[2:]
+			if len(result[i][j]) < 2:
+				result[i][j] = '0' + result[i][j]
+
+	return result
+
+# 逆列混合
+def inv_mix_column(plainlist):
+	inv_matlist = [
+	[0x0E, 0x0B, 0x0D, 0x09],
+	[0x09, 0x0E, 0x0B, 0x0D],
+	[0x0D, 0x09, 0x0E, 0x0B],
+	[0x0B, 0x0D, 0x09, 0x0E]]
+	def mul2(plainlist_item):
+		plainlist_item = bin(plainlist_item)[2:]
+		while len(plainlist_item) < 8:
+			plainlist_item = '0' + plainlist_item
+		temp = plainlist_item[1:] + '0'
+		temp = int(temp,2)
+		if plainlist_item[0] == '1':
+			result = temp ^ 0b00011011
+			return result
+		else: return temp
+
+	def mul4(plainlist_item):
+		return mul2(mul2(plainlist_item))
+
+	def mul8(plainlist_item):
+		return mul2(mul2(mul2(plainlist_item)))
+
+	# 乘9看做是乘8后与自己异或 (既偶数乘分解为多次乘2，奇数乘分解为多次偶数乘和自己异或)
+	def multi(inv_matlist, plainlist_item):
+		if inv_matlist == 0x09:
+			return mul8(plainlist_item) ^ plainlist_item
+		elif inv_matlist == 0x0B:
+			return mul8(plainlist_item) ^ mul2(plainlist_item) ^ plainlist_item
+		elif inv_matlist == 0x0D:
+			return mul8(plainlist_item) ^ mul4(plainlist_item) ^ plainlist_item
+		elif inv_matlist == 0X0E:
+			return mul8(plainlist_item) ^ mul4(plainlist_item) ^ mul2(plainlist_item)
+
+	for i in range(4):
+		for j in range(4):
+			plainlist[i][j] = int(plainlist[i][j], 16)
+
+	result = [[0 for i in range(4)] for j in range(4)]
+	for i in range(4):
+		for j in range(4):
+			temp = 0x0
+			for k in range(4):
+				temp = temp ^ multi(inv_matlist[i][k], plainlist[k][j])
+			result[i][j] = temp
+
+	for i in range(4):
+		for j in range(4):
+			result[i][j] = hex(result[i][j])[2:]
+			if len(result[i][j]) < 2:
+				result[i][j] = '0' + result[i][j]
+
+	return result
 
 
 # 生成所有密钥
@@ -178,6 +287,7 @@ if __name__ == '__main__':
 	plainlist = format_plain(plain)
 	plainlist = sub_bytes(plainlist)
 	plainlist = shift_rows(plainlist)
+	plainlist = mix_column(plainlist)
 	print (plainlist)
 
 
