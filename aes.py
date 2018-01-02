@@ -17,7 +17,6 @@ s_box = [
 	[0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf], #  e
 	[0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16]] #  f
 
-
 inv_s_box = [
 	#  0     1     2     3     4     5     6     7     8     9     a     b     c     d     e     f
 	[0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb], #  0
@@ -38,7 +37,7 @@ inv_s_box = [
 	[0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d]] #  f
 
 # 将输入明文转为数组形式存储
-def format_plain(plain):
+def format(plain):
 	plain = str(hex(plain))[2:]
 	while len(plain) < 32:
 		plain = '0' + plain
@@ -190,7 +189,6 @@ def inv_mix_column(plainlist):
 
 	def mul4(plainlist_item):
 		return mul2(mul2(plainlist_item))
-
 	def mul8(plainlist_item):
 		return mul2(mul2(mul2(plainlist_item)))
 
@@ -229,17 +227,48 @@ def inv_mix_column(plainlist):
 def round_key_add(plainlist, round):
 	w = [0 for i in range(4)]
 	for i in range(4):
-		w[i] = EXPANSION_KEY[4 * round + i]
-
+		w[i] = EXPANSIONED_KEY[4 * round + i]
 	result = [[0 for i in range(4)] for j in range(4)]
 	for i in range(4):
 		for j in range(4):
-			result[i][j] = int(w[j][i*2:i*2+2], 16) ^ int(plainlist[i][j], 16)
+			result[i][j] = int(w[j][i * 2:i * 2 + 2], 16) ^ int(plainlist[i][j], 16)
 			result[i][j] = hex(result[i][j])[2:]
 			if len(result[i][j]) < 2: result[i][j] = '0' + result[i][j]
 	return result
 
+# 轮密钥加的过程一致，但是在执行解密时，中间的9轮需要对密钥执行一次逆列混合
+def inv_round_key_add(cipherlist, round):
+	# 转格式
+	def key_format(w):
+		result = [[0 for i in range(4)] for j in range(4)]
+		for i in range(4):
+			for j in range(4):
+				result[j][i] = w[i][j*2:j*2+2]
+		return result
+	def key_reformat(w):
+		result = [0 for i in range(4)]
+		for i in range(4):
+			temp = ''
+			for j in range(4):
+				temp += ''.join(w[j][i])
+				result[i] = temp
+		return result
 
+	w = [0 for i in range(4)]
+	for i in range(4):
+		w[i] = EXPANSIONED_KEY[4 * round + i]
+	# 格式不一致，转为inv_mix_column需要的格式再执行，完成后reformat
+	w = key_format(w)
+	w = inv_mix_column(w)
+	w = key_reformat(w)
+
+	result = [[0 for i in range(4)] for j in range(4)]
+	for i in range(4):
+		for j in range(4):
+			result[i][j] = int(w[j][i * 2:i * 2 + 2], 16) ^ int(cipherlist[i][j], 16)
+			result[i][j] = hex(result[i][j])[2:]
+			if len(result[i][j]) < 2: result[i][j] = '0' + result[i][j]
+	return result
 
 # 生成所有密钥
 def key_expansion(input_key):
@@ -290,20 +319,81 @@ def key_expansion(input_key):
 				key[i] = '0' + key[i]
 	return key
 
+# 将list转为str
+def reformat(plainlist):
+	cipher = ''
+	for i in range(4):
+		for j in range(4):
+			cipher += ''.join(plainlist[j][i])
+	cipher = '0x' + cipher
+	return cipher
 
-
-if __name__ == '__main__':
-	global EXPANSION_KEY
-	key = 0x3CA10B2157F01916902E1380ACC107BD
-	# key = 0x61626364656667687A786376626E6D6C
-	EXPANSION_KEY = key_expansion(key)
-	# print (EXPANSION_KEY)
-
-	plain = 0x124523892ABD0A112104002A0BC11CFC
-	plainlist = format_plain(plain)
+# AES加密
+def AES(plain, key):
+	global EXPANSIONED_KEY
+	EXPANSIONED_KEY = key_expansion(key)
+	# 读入后格式化为二维list
+	plainlist = format(plain)
+	# 先执行一轮轮密钥加
+	plainlist = round_key_add(plainlist, 0)
+	# 执行9轮加密
+	for i in range(1, 10):
+		plainlist = sub_bytes(plainlist)
+		plainlist = shift_rows(plainlist)
+		plainlist = mix_column(plainlist)
+		plainlist = round_key_add(plainlist, i)
+	# 最后一轮不执行列混合
 	plainlist = sub_bytes(plainlist)
 	plainlist = shift_rows(plainlist)
-	plainlist = mix_column(plainlist)
-	plainlist = round_key_add(plainlist, 0)
-	print (plainlist)
+	plainlist = round_key_add(plainlist, 10)
+	# 将list转为字符串
+	cipher = reformat(plainlist)
+	return cipher
+
+# AES解密
+def inv_AES(cipher, key):
+	global EXPANSIONED_KEY
+	EXPANSIONED_KEY = key_expansion(key)
+
+	cipherlist = format(cipher)
+	# 第一轮解密使用最后一轮密钥，直接调用轮密钥加
+	cipherlist = round_key_add(cipherlist, 10)
+	# 中间的9轮过程需要对密钥进行逆列混合之后再执行轮密钥加
+	for i in range(9, 0, -1):
+		cipherlist = inv_sub_bytes(cipherlist)
+		cipherlist = inv_shift_rows(cipherlist)
+		cipherlist = inv_mix_column(cipherlist)
+		cipherlist = inv_round_key_add(cipherlist, i)
+	# 最后一轮解密直接调用轮密钥加
+	cipherlist = inv_sub_bytes(cipherlist)
+	cipherlist = inv_shift_rows(cipherlist)
+	cipherlist = round_key_add(cipherlist, 0)
+
+	plain = reformat(cipherlist)
+	return plain
+
+if __name__ == '__main__':
+
+	key = 0x3CA10B2157F01916902E1380ACC107BD
+	# key = 0x61626364656667687A786376626E6D6C
+
+	plain = 0x124523892ABD0A112104002A0BC11CFC
+
+	cipher = AES(plain, key)
+	print (cipher)
+	cipher = int(cipher, 16)
+
+
+	plain2 = inv_AES(cipher, key)
+	print (plain2)
+
+
+
+
+
+
+
+
+
+
 
