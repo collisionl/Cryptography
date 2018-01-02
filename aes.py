@@ -348,7 +348,7 @@ def AES(plain, key):
 	plainlist = round_key_add(plainlist, 10)
 	# 将list转为字符串
 	cipher = reformat(plainlist)
-	return cipher
+	return int(cipher, 16)
 
 # AES解密
 def inv_AES(cipher, key):
@@ -370,30 +370,7 @@ def inv_AES(cipher, key):
 	cipherlist = round_key_add(cipherlist, 0)
 
 	plain = reformat(cipherlist)
-	return plain
-
-if __name__ == '__main__':
-
-	key = 0x3CA10B2157F01916902E1380ACC107BD
-	# key = 0x61626364656667687A786376626E6D6C
-
-	plain = 0x124523892ABD0A112104002A0BC11CFC
-
-	cipher = AES(plain, key)
-	print (cipher)
-	cipher = int(cipher, 16)
+	return int(plain, 16)
 
 
-	plain2 = inv_AES(cipher, key)
-	print (plain2)
-
-
-
-
-
-
-
-
-
-
-
+	
