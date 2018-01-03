@@ -34,7 +34,7 @@ def DESfile(filepath, key):
 			partresult = bin2str(partdes)
 			result += partresult
 			# print (partresult)
-		print (result)
+		# print (result)
 
 	with open('des_encryptfile.txt', 'w+') as of:
 		of.write(result)
@@ -56,7 +56,7 @@ def _DESfile(filepath, key):
 			partresult = bin2str(partdes)
 			result += partresult
 			# print (partresult)
-		print (result)
+		# print (result)
 
 	with open('des_decryptfile.txt', 'w+') as of:
 		of.write(result)
@@ -65,7 +65,7 @@ def _DESfile(filepath, key):
 
 if __name__ == '__main__':
 	key = 0x0E329232EA6A0D73
-	filepathin = 'infile.txt'
+	filepathin = 'dec1.txt'
 	filepathout = 'des_encryptfile.txt'
 	DESfile(filepathin, key)
 	_DESfile(filepathout, key)

@@ -24,16 +24,18 @@ def AESfile(filepath, key):
 		while True:
 			part = fd.read(16)
 			if len(part) == 0: break
-			part = str(part).replace('b\'','').replace('\'','')
+			part = str(part)
 			part = str2bin(part)
 			part = int(part,2)
+			# print (hex(part), '1')
 			partaes = AES(part, key)
+			# print (hex(partaes), '2')
 			partaes = bin(partaes)[2:]
 			while len(partaes) < 128:
 				partaes = '0' + partaes
 			partresult = bin2str(partaes)
 			result += partresult
-		print (result)
+		# print (result)
 
 	with open('aes_encryptfile.txt', 'w+') as of:
 		of.write(result)
@@ -45,16 +47,19 @@ def _AESfile(filepath, key):
 		while True:
 			part = fd.read(16)
 			if len(part) == 0: break
-			part = str(part).replace('b\'','').replace('\'','')
+			part = str(part)
+			# print (part)
 			part = str2bin(part)
 			part = int(part,2)
+			# print (hex(part), '3')
 			partaes = inv_AES(part, key)
+			# print (hex(partaes), '4')
 			partaes = bin(partaes)[2:]
 			while len(partaes) < 128:
 				partaes = '0' + partaes
-			partresult = bin2str(partaes)
+			partresult = bin2str(partaes).replace('b\'','')
 			result += partresult
-		print (result)
+		# print (result)
 
 	with open('aes_decryptfile.txt', 'w+') as of:
 		of.write(result)
@@ -63,7 +68,7 @@ def _AESfile(filepath, key):
 
 if __name__ == '__main__':
 	key = 0x3CA10B2157F01916902E1380ACC107BD
-	filepathin = 'infile.txt'
+	filepathin = 'dec1.txt'
 	filepathout = 'aes_encryptfile.txt'
 	AESfile(filepathin, key)
 	_AESfile(filepathout, key)
