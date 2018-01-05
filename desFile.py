@@ -24,15 +24,16 @@ def DESfile(filepath, key):
 		while True:
 			part = fd.read(8)
 			if len(part) == 0: break
-			part = str(part).replace('b\'','').replace('\'','')
+			part = str(part)
 			part = str2bin(part)
 			part = int(part,2)
+			# print (hex(part))
 			partdes = DES(part, key)
-			partdes = bin(partdes)[2:]
-			while len(partdes) < 64:
+			partdes = hex(partdes)[2:]
+			# print (partdes)
+			while len(partdes) < 16:
 				partdes = '0' + partdes
-			partresult = bin2str(partdes)
-			result += partresult
+			result += partdes
 			# print (partresult)
 		# print (result)
 
@@ -44,18 +45,16 @@ def _DESfile(filepath, key):
 	with open(filepath , 'r+') as fd:
 		result = ''
 		while True:
-			part = fd.read(8)
+			part = fd.read(16)
 			if len(part) == 0: break
-			part = str(part).replace('b\'','').replace('\'','')
-			part = str2bin(part)
-			part = int(part,2)
+			part = str(part)
+			part = int(part, 16)
 			partdes = DESre(part, key)
 			partdes = bin(partdes)[2:]
 			while len(partdes) < 64:
 				partdes = '0' + partdes
 			partresult = bin2str(partdes)
 			result += partresult
-			# print (partresult)
 		# print (result)
 
 	with open('des_decryptfile.txt', 'w+') as of:
@@ -65,11 +64,8 @@ def _DESfile(filepath, key):
 
 if __name__ == '__main__':
 	key = 0x0E329232EA6A0D73
-	filepathin = 'dec1.txt'
+	filepathin = 'infile.txt'
 	filepathout = 'des_encryptfile.txt'
 	DESfile(filepathin, key)
 	_DESfile(filepathout, key)
 	
-
-
-
