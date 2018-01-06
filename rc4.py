@@ -42,27 +42,59 @@ def RC4(gen_key, plain, text_len):
 		cipher += ''.join(cipher_list[i])
 	return cipher
 
+def file_RC4(key, filepath):
+	# 扩展原密钥生成S盒
+	expansion_key = KSA(key)
+
+	fileopen = open(filepath, 'r+')
+	filetext = fileopen.read()
+	fileopen.close()
+	filetextstr = ''
+	for i in range(len(filetext)):
+		temp = hex(ord(filetext[i]))[2:]
+		if len(temp) < 2: temp = '0' + temp
+		filetextstr += temp
+
+	# 根据text长度生成定长的密钥流
+	text_len = int(len(filetextstr) / 2)
+	gen_key = PRGA(expansion_key, text_len)
+	# 加密
+	cipher = RC4(gen_key, filetextstr, text_len)
+	
+	fileopen2 = open('RC4encryptfile.txt', 'w+')
+	fileopen2.write(cipher)
+	fileopen2.close()
+	print ('Done')
+
+def inv_file_RC4(key, filepath):
+	# 扩展原密钥生成S盒
+	expansion_key = KSA(key)
+
+	fileopen = open(filepath, 'r+')
+	filetext = fileopen.read()
+	fileopen.close()
+	filetextstr = filetext
+
+	text_len = int(len(filetextstr) / 2)
+	gen_key = PRGA(expansion_key, text_len)
+	plainstr = RC4(gen_key, filetextstr, text_len)
+
+	plain = ''
+	for i in range(text_len):
+		temp = plainstr[i*2:i*2+2]
+		temp = chr(int(temp,16))
+		plain += temp
+	
+	fileopen2 = open('RC4decryptfile.txt', 'w+')
+	fileopen2.write(plain)
+	fileopen2.close()
+	print ('Done')
+
 if __name__ == '__main__':
 	# key必须为128bit
 	key = '3CA10B2157F01916902E1380ACC107BD'
-	# plain为hex的数据 2个hex代表一个字节
-	plain = '47726f756e6420436f6e74726f6c2074'	
 
-	# 扩展原密钥生成S盒
-	expansion_key = KSA(key)
-	# print (expansion_key)
-
-	# 根据text长度生成定长的密钥流
-	text_len = int(len(plain) / 2)
-	gen_key = PRGA(expansion_key, text_len)
-
-	cipher = RC4(gen_key, plain, text_len)
-	print (cipher)
-
-	plain2 = RC4(gen_key, cipher, text_len)
-	print (plain2)
-
-
-
-# Ground Control t
-# 0x47726f756e6420436f6e74726f6c2074
+	filepath = 'infile.txt'
+	file_RC4(key, filepath)
+	filepath = 'RC4encryptfile.txt'
+	inv_file_RC4(key, filepath)
