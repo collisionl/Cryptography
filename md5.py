@@ -1,8 +1,6 @@
 # coding:utf-8
-
-# format the input
+# 转为md5需要的二进制表示
 def init(text):
-	# tran to bin
 	bin_text = ''
 	for i in range(len(text)):
 		temp = bin(ord(text[i]))[2:]
@@ -10,12 +8,30 @@ def init(text):
 			temp = '0' + temp
 		bin_text += temp
 	# cal the len of text and padding with 0 in the front
+	# 在填充后64位时（既总长度填充），实际操作中需要的数据不需转为小端续
+	# 但其他数据需要转换，所以在初始换的时候直接将64位数据分32位各自转换
+	# 运行时转换为原来的长度数值
 	len_bin_text = bin(len(bin_text))[2:]
-	while len(len_bin_text) % 8 != 0:
+	while len(len_bin_text) < 32:
 		len_bin_text = '0' + len_bin_text
 	while len(len_bin_text) < 64:
 		len_bin_text = len_bin_text + '0'
-	# padding with 100... if mod != 448
+	# 左边既m[14]的32位
+	left_of_text = int(len_bin_text[:32],2)
+	left_of_text = endian_tran(left_of_text)
+	left_of_text = (bin(left_of_text))[2:]
+	while len(left_of_text) < 32:
+		left_of_text = '0' + left_of_text
+	# 右边既m[15]的32位
+	right_of_text = int(len_bin_text[32:],16)
+	right_of_text = endian_tran(right_of_text)
+	right_of_text = bin(right_of_text)[2:]
+	while len(right_of_text) < 32:
+		right_of_text = '0' + right_of_text
+	# 拼接成最终64位
+	len_bin_text = left_of_text + right_of_text
+
+	# 填充一个1和若干0
 	if len(bin_text) % 512 != 448:
 		bin_text = bin_text + '1'
 		while len(bin_text) % 512 != 448:
@@ -23,28 +39,22 @@ def init(text):
 
 	return bin_text + len_bin_text
 
-def endian_tran(num):
-	temp = hex(num)[2:]
-	while len(temp) < 8:
-		temp = '0' + temp
-	return int(temp[6:8]+temp[4:6]+temp[2:4]+temp[0:2], 16)
-
+# 32位寄存器循环左移，左移前取低32位
 def left_shift(temp, shift):
 	temp = temp & 0xffffffff
-	# temp = bin(temp)[2:]
-	# return int(temp[shift:] + temp[:shift], 2)
 	return (temp << shift) | (temp >> (32 - shift))
 
+# 4个非线形函数
 def f_fun(x, y, z): return (x & y) | ((~x) & z)
 def g_fun(x, y, z): return (x & z) | (y & (~z))
 def h_fun(x, y, z): return x ^ y ^ z
 def i_fun(x, y, z): return y ^ (x | (~z))
 
+# 步函数：因为32位寄存器，每次都取低32位
 def step_f(a, b, c, d, mj, shift, ti):
 	temp = a + f_fun(b, c, d) + mj + ti
 	a = b + left_shift(temp, shift)
 	return a & 0xffffffff
-
 def step_g(a, b, c, d, mj, shift, ti):
 	temp = a + g_fun(b, c, d) + mj + ti
 	temp = temp & 0xffffffff
@@ -61,39 +71,42 @@ def step_i(a, b, c, d, mj, shift, ti):
 	a = b + left_shift(temp, shift)
 	return a & 0xffffffff
 
-def compress_fun(text_list, i, round_result):
+# 大小端续转换
+def endian_tran(num):
+	temp = hex(num)[2:]
+	while len(temp) < 8:
+		temp = '0' + temp
+	return int(temp[6:8]+temp[4:6]+temp[2:4]+temp[0:2], 16)
+
+# 压缩函数
+def compress_fun(text_listi, i, round_result):
+	# 传入的text_listi仅为本次使用的512bit
+	# i用来判断循环次数，第一次循环使用初始数据，否则使用上一次循环的结果
 	if i == 0:
 		a = 0x67452301
 		b = 0xEFCDAB89
 		c = 0x98BADCFE
 		d = 0x10325476
 	else:
-		a = int(round_result[:32], 2)
-		b = int(round_result[32:64], 2)
-		c = int(round_result[64:96], 2)
-		d = int(round_result[96:], 2)
+		a = int(round_result[:8], 16)
+		b = int(round_result[8:16], 16)
+		c = int(round_result[16:24], 16)
+		d = int(round_result[24:], 16)
+	# 结束后与自己相加取模的备用
 	aa = a
 	bb = b
 	cc = c
 	dd = d
-
-	# print (text_list)
-	m = [0 for i in range(16)]
-	for i in range(16):
-		m[i] = int(text_list[i*32:i*32+32], 2)
-		m[i] = endian_tran(m[i])
-		# print (hex(m[i]))
-	# print (hex(a), hex(b), hex(c), hex(d))
-
-	# 循环
+	# 512bit分片为16个32bit，并且转换端续
+	m = [0 for z in range(16)]
+	for j in range(16):
+		m[j] = int(text_listi[j*32:j*32+32], 2)
+		m[j] = endian_tran(m[j])
+	# 第一轮
 	a = step_f(a, b, c, d, m[0], 7, 0xd76aa478)
-	# print (hex(d), hex(a), hex(b), hex(c))
 	d = step_f(d, a, b, c, m[1], 12, 0xe8c7b756)
-	# print (hex(c), hex(d), hex(a), hex(b))
 	c = step_f(c, d, a, b, m[2], 17, 0x242070db)
-	# print (hex(b), hex(c), hex(d), hex(a))
 	b = step_f(b, c, d, a, m[3], 22, 0xc1bdceee)
-	# print (hex(a), hex(b), hex(c), hex(d))
 	a = step_f(a, b, c, d, m[4], 7, 0xf57c0faf)
 	d = step_f(d, a, b, c, m[5], 12, 0x4787c62a)
 	c = step_f(c, d, a, b, m[6], 17, 0xa8304613)
@@ -106,7 +119,7 @@ def compress_fun(text_list, i, round_result):
 	d = step_f(d, a, b, c, m[13], 12, 0xfd987193)
 	c = step_f(c, d, a, b, m[14], 17, 0xa679438e)
 	b = step_f(b, c, d, a, m[15], 22, 0x49b40821)
-
+	# 第二轮
 	a = step_g(a, b, c, d, m[1], 5, 0xf61e2562)
 	d = step_g(d, a, b, c, m[6], 9, 0xc040b340)
 	c = step_g(c, d, a, b, m[11], 14, 0x265e5a51)
@@ -123,7 +136,7 @@ def compress_fun(text_list, i, round_result):
 	d = step_g(d, a, b, c, m[2], 9, 0xfcefa3f8)
 	c = step_g(c, d, a, b, m[7], 14, 0x676f02d9)
 	b = step_g(b, c, d, a, m[12], 20, 0x8d2a4c8a)
-
+	# 第三轮
 	a = step_h(a, b, c, d, m[5], 4, 0xfffa3942)
 	d = step_h(d, a, b, c, m[8], 11, 0x8771f681)
 	c = step_h(c, d, a, b, m[11], 16, 0x6d9d6122)
@@ -140,7 +153,7 @@ def compress_fun(text_list, i, round_result):
 	d = step_h(d, a, b, c, m[12], 11, 0xe6db99e5)
 	c = step_h(c, d, a, b, m[15], 16, 0x1fa27cf8)
 	b = step_h(b, c, d, a, m[2], 23, 0xc4ac5665)
-
+	# 第四轮
 	a = step_i(a, b, c, d, m[0], 6, 0xf4292244)
 	d = step_i(d, a, b, c, m[7], 10, 0x432aff97)
 	c = step_i(c, d, a, b, m[14], 15, 0xab9423a7)
@@ -157,7 +170,7 @@ def compress_fun(text_list, i, round_result):
 	d = step_i(d, a, b, c, m[11], 10, 0xbd3af235)
 	c = step_i(c, d, a, b, m[2], 15, 0x2ad7d2bb)
 	b = step_i(b, c, d, a, m[9], 21, 0xeb86d391)
-
+	# 结尾相加取余 不足8位补齐
 	a = hex((a + aa) % (2**32))[2:]
 	while len(a) < 8: a = '0' + a
 	b = hex((b + bb) % (2**32))[2:]
@@ -166,18 +179,16 @@ def compress_fun(text_list, i, round_result):
 	while len(c) < 8: c = '0' + c
 	d = hex((d + dd) % (2**32))[2:]
 	while len(d) < 8: d = '0' + d
-	# print (a, b, c, d)
-
 	return a + b + c + d
 
+# 结果转为大端续
 def result_endian_tran(temp):
 	return temp[6:8]+temp[4:6]+temp[2:4]+temp[0:2]
 def deformat_result(result):
-	return result_endian_tran(result[:8]) + result_endian_tran(result[8:16]) + result_endian_tran(result[16:24]) + result_endian_tran(result[24:])
-
+	return result_endian_tran(result[:8]) + result_endian_tran(result[8:16]) + \
+		result_endian_tran(result[16:24]) + result_endian_tran(result[24:])
 
 def md5(text):
-	# print (text)
 	text_list = [0 for i in range(int(len(text)/512))]
 	for i in range(int(len(text)/512)):
 		text_list[i] = text[i*512:i*512+512]
@@ -187,10 +198,9 @@ def md5(text):
 	round_result = deformat_result(round_result).upper()
 	print (round_result)
 
-
-
 if __name__ == '__main__':
 	# text = 'iscbupt'
 	text = 'Beijing University of Posts and Telecommunications'
+	# text = 'State Key Laboratory of Networking and Switching'
 	format_text = init(text)
 	md5(format_text)
