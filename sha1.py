@@ -1,5 +1,4 @@
 # coding:utf-8
-
 def init(text):
 	bin_text = ''
 	for i in range(len(text)):
@@ -7,18 +6,15 @@ def init(text):
 		while len(temp) < 8: 
 			temp = '0' + temp
 		bin_text += temp
-	# cal the len of text and padding with 0 in the front
 	len_bin_text = bin(len(bin_text))[2:]
 	while len(len_bin_text) < 64:
 		len_bin_text = '0' + len_bin_text
-	# 填充一个1和若干0
 	if len(bin_text) % 512 != 448:
 		bin_text = bin_text + '1'
 		while len(bin_text) % 512 != 448:
 			bin_text = bin_text + '0'
 	return bin_text + len_bin_text
 
-# 32位寄存器循环左移，左移前取低32位
 def left_shift(temp, shift):
 	temp = temp & 0xffffffff
 	return (temp << shift) | (temp >> (32 - shift))
@@ -40,9 +36,6 @@ def compress_fun(text_listi, i, round_result):
 	def ch(x, y, z): return (x & y) ^ (~x & z)
 	def pa(x, y, z): return x ^ y ^ z
 	def ma(x, y, z): return (x & y) ^ (x & z) ^ (y & z)
-
-	# 传入的text_listi仅为本次使用的512bit
-	# i用来判断循环次数，第一次循环使用初始数据，否则使用上一次循环的结果
 	if i == 0:
 		a = 0x67452301
 		b = 0xEFCDAB89
@@ -55,16 +48,14 @@ def compress_fun(text_listi, i, round_result):
 		c = int(round_result[16:24], 16)
 		d = int(round_result[24:32], 16)
 		e = int(round_result[32:], 16)
-	# 结束后与自己相加取模的备用
 	aa = a
 	bb = b
 	cc = c
 	dd = d
 	ee = e
-
+	# 扩充
 	m = expansion_of_m(text_listi)
-	# print (m)
-
+	# 第一步
 	for i in range(20):
 		temp_a = (left_shift(a, 5) + ch(b, c, d) + e + m[i] + 0x5A827999) & 0xffffffff
 		temp_b = a
@@ -76,7 +67,7 @@ def compress_fun(text_listi, i, round_result):
 		c = temp_c
 		d = temp_d
 		e = temp_e
-	# print (hex(a),hex(b),hex(c),hex(d),hex(e))
+	# 第二步
 	for i in range(20):
 		temp_a = (left_shift(a, 5) + pa(b, c, d) + e + m[i+20] + 0x6ED9EBA1) & 0xffffffff
 		temp_b = a
@@ -88,7 +79,7 @@ def compress_fun(text_listi, i, round_result):
 		c = temp_c
 		d = temp_d
 		e = temp_e
-	# print (hex(a),hex(b),hex(c),hex(d),hex(e))
+	# 第三步
 	for i in range(20):
 		temp_a = (left_shift(a, 5) + ma(b, c, d) + e + m[i+40] + 0x8F1BBCDC) & 0xffffffff
 		temp_b = a
@@ -100,7 +91,7 @@ def compress_fun(text_listi, i, round_result):
 		c = temp_c
 		d = temp_d
 		e = temp_e
-	# print (hex(a),hex(b),hex(c),hex(d),hex(e))
+	# 第四步
 	for i in range(20):
 		temp_a = (left_shift(a, 5) + pa(b, c, d) + e + m[i+60] + 0xCA62C1D6) & 0xffffffff
 		temp_b = a
@@ -112,7 +103,6 @@ def compress_fun(text_listi, i, round_result):
 		c = temp_c
 		d = temp_d
 		e = temp_e
-	# print (hex(a),hex(b),hex(c),hex(d),hex(e))
 	a = hex((aa + a) & 0xffffffff)[2:]
 	while len(a) < 8: a = '0' + a
 	b = hex((bb + b) & 0xffffffff)[2:]
@@ -123,11 +113,7 @@ def compress_fun(text_listi, i, round_result):
 	while len(d) < 8: d = '0' + d
 	e = hex((ee + e) & 0xffffffff)[2:]
 	while len(e) < 8: e = '0' + e
-	# print (a,b,c,d,e)
 	return a + b + c + d + e
-
-
-
 
 def sha1(text):
 	text_list = [0 for i in range(int(len(text)/512))]
@@ -138,14 +124,12 @@ def sha1(text):
 		round_result = compress_fun(text_list[i], i, round_result)
 	return round_result.upper()
 
-
 if __name__ == '__main__':
 	# text = 'iscbupt'
 	# text = 'asjfljshdflkjhasdlkjfhasdkljfhaskldjfhaklsjdhfkljasdhfkljsahdfjklashdfjlkshadljkfhlskadfjk'
 	# text = 'Beijing University of Posts and Telecommunications'
 	# text = 'State Key Laboratory of Networking and Switching'
-	
-	fileopen = open('randomfile1.txt','r+')
+	fileopen = open('infile.txt','r+')
 	text = fileopen.read()
 	fileopen.close()
 
