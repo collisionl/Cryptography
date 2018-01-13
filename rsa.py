@@ -99,15 +99,68 @@ def key_gen():
 	# print 'd =', d
 	return e,d,n
 
+def file_encrypt(e, n, filepath):
+	fileopen = open(filepath, 'r+')
+	data = fileopen.read()
+	fileopen.close()
+
+	hex_text = ''
+	for i in range(len(data)):
+		temp = hex(ord(data[i]))[2:]
+		if len(temp) < 2: 
+			temp = '0' + temp
+		hex_text += temp
+	# print (hex_text)
+
+	hex_text_list = [0 for i in range(len(hex_text)/60+1)]
+	for i in range(len(hex_text_list)):
+		hex_text_list[i] = hex_text[i*60:i*60+60]
+	# print hex_text_list
+
+	cipher_text = ''
+	for i in range(len(hex_text_list)):
+		temp = int(hex_text[i*60:i*60+60],16)
+		temp = hex(quickPowMod(temp, e, n))[2:].replace('L','')
+		while len(temp) < 70: temp = '0' + temp
+		cipher_text += temp
+	# print cipher_text_list
+	# print cipher_text
+	with open('rsa_encryption_file.txt', 'w+') as fw:
+		fw.write(cipher_text)
+	print 'Encryption Done'
+
+def file_decrypt(d, n, filepath2):
+	fileopen = open(filepath2, 'r+')
+	data = fileopen.read()
+	fileopen.close()
+	# print (data)
+
+	plain_text = ''
+	for i in range(len(data)/70):
+		temp = int(data[i*70:i*70+70], 16)
+		temp = hex(quickPowMod(temp, d, n))[2:].replace('L','')
+		plain_text += temp
+	# print plain_text
+
+	plain = ''
+	for i in range(len(plain_text)/2):
+		temp = plain_text[i*2:i*2+2]
+		temp = chr(int(temp,16))
+		plain += temp
+	# print plain
+	
+	fileopen2 = open('rsa_decryption_file.txt', 'w+')
+	fileopen2.write(plain)
+	fileopen2.close()
+	print 'Decryption Done'
+
 if __name__ == '__main__':
 	e,d,n = key_gen()
-	print '公钥：', e,n
-	print '私钥：', d,n
-	plain = 78900128937812978912739812
-	cipher = quickPowMod(plain, e, n)
-	print cipher
-	plain2 = quickPowMod(cipher, d, n)
-	print plain2
+	print '公钥：', e
+	print 'mod:', n
+	print '私钥：', d
 
-	
-
+	filepath = 'infile.txt'
+	file_encrypt(e, n, filepath)
+	filepath2 = 'rsa_encryption_file.txt'
+	file_decrypt(d, n, filepath2)
