@@ -1,7 +1,7 @@
 # Cryptography
-* 仿射密码
-* 维吉尼亚
-* 写了一半的hill
+* Affine cipher
+* Vigenère
+* hill(not done)
 * DES
 * AES
 * RC4
