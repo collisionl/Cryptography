@@ -7,6 +7,7 @@ def key_gen(key, lenofplain):
 			temp = str(int(x_list[12]) ^ int(x_list[16]) ^ int(x_list[20]) ^ int(x_list[21]))
 		else:
 			temp = str(int(x_list[17]) ^ int(x_list[18]) ^ int(x_list[21]) ^ int(x_list[22]))
+
 		result = [0 for i in range(len(x_list))]
 		for i in range(len(x_list) - 1,0, -1):
 			result[i] = x_list[i - 1]
@@ -15,7 +16,7 @@ def key_gen(key, lenofplain):
 		return result
 
 	key_list = bin(key)[2:]
-	while key_list < 64:
+	while len(key_list) < 64:
 		key_list = '0' + key_list
 	a_init = key_list[:19]
 	b_init = key_list[19:41]
@@ -81,7 +82,7 @@ def inv_a5_file(filepath, key):
 	plainhex = hex(plain)[2:].replace('L','')
 
 	plain = ''
-	for i in range(len(plainhex)/2):
+	for i in range(int(len(plainhex)/2)):
 		temp = plainhex[i*2:i*2+2]
 		temp = chr(int(temp,16))
 		plain += temp
@@ -91,10 +92,9 @@ def inv_a5_file(filepath, key):
 	filewrite.close()
 	print ('Done')
 
-
 if __name__ == '__main__':
 	key = 0xfC9129ff57F01116
-	filepath = 'randomfile.txt'
+	filepath = 'infile.txt'
 	a5_file(filepath, key)
 	filepath2 = 'a5enctypt.txt'
 	inv_a5_file(filepath2, key)	
